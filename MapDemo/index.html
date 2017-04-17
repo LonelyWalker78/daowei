@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<title></title>
+		<link href="css/mui.min.css" rel="stylesheet" />
+		<style>
+			#map {
+				width: 100%;
+				position: fixed;
+				top: 0px;
+				bottom: 0px;
+				line-height: 200px;
+				text-align: center;
+				background: #FFFFFF;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="map">地图加载中...</div>
+		<script src="js/mui.min.js"></script>
+		<script src="js/md5.js"></script>
+		<script src="js/iconload.js" ></script>
+		<script type="text/javascript" charset="utf-8">
+			var locationSub = null;
+			var map = null;
+			var flagMarker = null;
+			var clickMarker = null;
+			var clickIconUrl;
+			var currentPoint = null;
+			var goodsInfo;
+			var flagUrl = "images/flag.png";
+			var IflagUrl = "images/Iflag@2x.png";
+			// H5 plus事件处理
+			function plusReady() {
+				if('Android' == plus.os.name && navigator.userAgent.indexOf('StreamApp') > 0) {
+					plus.nativeUI.toast('当前环境暂不支持地图插件');
+					return;
+				}
+				setTimeout(function() {
+					map = new plus.maps.Map("map");
+					userLocation();
+					createLocationSubview();
+					createSubview();
+				}, 300);
+			};
+			if(window.plus) {
+				plusReady();
+			} else {
+				document.addEventListener("plusready", plusReady, false);
+			}
+			function userLocation() {
+				//map.showUserLocation(true);
+				//获取用户的当前位置信息
+				map.getUserLocation(function(state, pos) {
+					if(0 == state) {
+						map.centerAndZoom(pos, 16);
+						createMarker(pos.getLng(), pos.getLat());
+						currentPoint = pos;
+						loadCommodityList(pos.getLng(), pos.getLat());
+					}
+				});
+				//用户点击地图事件
+				map.onclick = function(point) {
+					var sub = plus.webview.getWebviewById('maps_map_sub.html');
+					if(sub) {
+						sub.hide();
+						if(locationSub == null) {
+							locationSub = plus.webview.getWebviewById('maps-location-sub.html')
+						}
+						//定位图标下移
+						locationSub.setStyle({
+							bottom: '10px'
+						});
+						if(clickMarker != null && clickIconUrl) {
+							//将选中的放大图标变为正常图标
+							snail.loadIcon(clickMarker, clickIconUrl, false);
+						}
+					}
+				}
+				//地图状态变化监听事件
+				map.onstatuschanged = function(e) {
+					var pt1 = new plus.maps.Point(e.center.longitude, e.center.latitude);
+					currentPoint = pt1;
+					map.setCenter(pt1, 16); //设置地图的中心点
+					clearMarker();
+					//创建定位针
+					createMarker(pt1.getLng(), pt1.getLat());
+					//加载附近的出租屏
+					loadCommodityList(pt1.getLng(), pt1.getLat());
+				}
+			};
+			//创建定位针
+			function createMarker(lng, lat) {
+				flagMarker = new plus.maps.Marker(new plus.maps.Point(lng, lat));
+				if(plus.os.name == "iOS") {
+					flagMarker.setIcon(IflagUrl);
+				} else {
+					flagMarker.setIcon(flagUrl);
+				}
+				map.addOverlay(flagMarker);
+				//覆盖物显示到最上层
+				flagMarker.bringToTop();
+			};
+			// 添加标点
+			var markers = [],
+				n = 0;
+			//在地图上加载附近的商品
+			function loadCommodityList(lng, lat) {
+				goodsInfo = [];
+				//模拟从服务器获取到的json数据
+				for(var i = 0; i < 10; i++) {
+					var temp = 0;
+					for	(var j = 0; j < i; j++) {
+						temp = addition(temp, 0.001);
+					}
+					var row = {};
+					if (i % 2 == 0 && i < 5) {
+						row.lng = addition(lng, temp);
+						row.lat = addition(lat, temp);
+						row.img = "http://b.hiphotos.baidu.com/image/pic/item/7a899e510fb30f24fbe1fc2fc195d143ad4b03a6.jpg";
+					} else if (i % 2 != 0 && i < 5) {
+						row.lng = accSub(lng, temp);
+						row.lat = accSub(lat, temp);
+						row.img = "http://g.hiphotos.baidu.com/image/pic/item/d6ca7bcb0a46f21fa85e4e7fff246b600c33aeb7.jpg";
+					}else if (i % 2 == 0) {
+						row.lng = addition(lng, temp);
+						row.lat = accSub(lat, temp);
+						row.img = "http://b.hiphotos.baidu.com/image/pic/item/7a899e510fb30f24fbe1fc2fc195d143ad4b03a6.jpg";
+					} else {
+						row.lng = accSub(lng, temp);
+						row.lat = addition(lat, temp);
+						row.img = "http://g.hiphotos.baidu.com/image/pic/item/d6ca7bcb0a46f21fa85e4e7fff246b600c33aeb7.jpg";
+					}
+					row.itemId = i;
+					row.title = "这是第" + i + "个标题";
+					row.price = i + ".69";
+					row.address = "这是第" + i + "个地址";
+					goodsInfo.push(row);
+				}
+				//取出json数据并根据经纬度在地图上添加标志物
+				for(var i = 0; i < goodsInfo.length; i++) {
+					var marker = new plus.maps.Marker(new plus.maps.Point(goodsInfo[i].lng, goodsInfo[i].lat));
+					marker.setIcon("images/head.png"); //先设置一张透明的图片，防止图片还没下载到本地时地图上出现小红点
+					var image_url = goodsInfo[i].img;
+					snail.loadIcon(marker, image_url, false);
+					map.addOverlay(marker);
+					markerClick(marker, goodsInfo[i].itemId, goodsInfo[i].title, goodsInfo[i].price, goodsInfo[i].address, image_url);
+					markers.push(marker);
+					n++;
+				}
+			};
+			/*用户点击覆盖物*/
+			function markerClick(markObj, itemId, title, price, address, image_url) {
+				markObj.onclick = function(marker) {
+					if(clickMarker != null && clickIconUrl) {
+						//将之前选中的放大图标变为正常图标
+						snail.loadIcon(clickMarker, clickIconUrl, false);
+					}
+					//记录当前放大的标志物与其图片地址
+					clickMarker = marker;
+					clickIconUrl = image_url;
+					//将当前选中的正常图标变为放大图标
+					snail.loadIcon(clickMarker, clickIconUrl, true);
+					//覆盖物显示到最上层
+					clickMarker.bringToTop();
+					var sub = plus.webview.getWebviewById('maps_map_sub.html');
+					if(!sub) {
+						sub = plus.webview.create('maps_map_sub.html', 'maps_map_sub.html', {
+							bottom: '10px',
+							height: '97px',
+							position: 'absolute',
+							scrollIndicator: 'none',
+							background: 'transparent'
+						});
+						sub.evalJS("showInfo('" + JSON.stringify(goodsInfo) + "','" + itemId + "');");
+						if(locationSub == null) {
+							locationSub = plus.webview.getWebviewById('maps-location-sub.html');
+						}
+						//定位图标上移
+						locationSub.setStyle({
+							bottom: '110px'
+						});
+						plus.webview.currentWebview().append(sub);
+					} else {
+						sub.evalJS("showInfo('" + JSON.stringify(goodsInfo) + "','" + itemId + "');");
+						if(locationSub == null) {
+							locationSub = plus.webview.getWebviewById('maps-location-sub.html');
+						}
+						//定位图标上移
+						locationSub.setStyle({
+							bottom: '110px'
+						});
+						sub.show();
+					}
+				}
+			};
+			/*滑动商品详情时，在地图放大对应的商品图片*/
+			function changeSlider(index, image_url) {
+				if(clickMarker != null && clickIconUrl) {
+					//将之前选中的放大图标变为正常图标
+					snail.loadIcon(clickMarker, clickIconUrl, false);
+				}
+				//记录当前放大的标志物与其图片地址
+				clickMarker = markers[index];
+				clickIconUrl = image_url;
+				//将当前选中的正常图标变为放大图标
+				snail.loadIcon(clickMarker, clickIconUrl, true);
+				//覆盖物显示到最上层
+				clickMarker.bringToTop();
+			};
+			/*点击地图上的商品详情窗口跳转到商品详情页面*/
+			function viewDetails(itemId) {
+				mui.openWindow({
+					url: 'detailes.html',
+					id: 'detailes.html',
+					extras: {
+						name: itemId,
+					},
+					waiting: {
+						autoShow: false
+					}
+				});
+			};
+			/*创建地图上的商品详情窗口*/
+			function createSubview() {
+				if(plus.webview.getWebviewById('maps_map_sub.html')) {
+					return
+				}
+				// 创建加载内容窗口
+				var wsub = plus.webview.create('maps_map_sub.html', 'maps_map_sub.html', {
+					bottom: '10px',
+					height: '97px',
+					position: 'absolute',
+					scrollIndicator: 'none',
+					background: 'transparent'
+				});
+				wsub.hide();
+				plus.webview.currentWebview().append(wsub);
+			};
+			/*创建地图上的定位图标*/
+			function createLocationSubview() {
+				if(locationSub != null) {
+					return
+				}
+				locationSub = plus.webview.create('maps-location-sub.html', 'maps-location-sub.html', {
+					bottom: '10px',
+					height: '36px',
+					width: '46px',
+					position: 'absolute',
+					scrollIndicator: 'none',
+					background: 'transparent'
+				});
+				plus.webview.currentWebview().append(locationSub);
+			};
+			/*清除当前地图上的定位针及标志物*/
+			function clearMarker() {
+				//清除定位针
+				map.removeOverlay(flagMarker);
+				delete flagMarker;
+				flagMarker = null;
+				//清除标志物
+				for(var i = 0; i < markers.length; i++) {
+					map.removeOverlay(markers[i]);
+					delete markers[i];
+				}
+				markers = [];
+				n = 0;
+			};
+			/*定位到当前位置按钮触发的事件*/
+			function relocation() {
+				//获取用户的当前位置信息
+				map.getUserLocation(function(state, pos) {
+					if(0 == state) {
+						var sub = plus.webview.getWebviewById('maps_map_sub.html');
+						if(sub) {
+							sub.hide();
+							if(locationSub == null) {
+								locationSub = plus.webview.getWebviewById('maps-location-sub.html')
+							}
+							//定位图标下移
+							locationSub.setStyle({
+								bottom: '10px'
+							});
+						}
+						clearMarker();
+						map.centerAndZoom(pos, 16);
+						//创建定位针
+						createMarker(pos.getLng(), pos.getLat());
+						currentPoint = pos;
+						loadCommodityList(pos.getLng(), pos.getLat());
+					}
+				});
+			};
+			/*加法函数，用来得到精确的加法结果*/
+			function addition(arg1, arg2) {
+				var r1, r2, m, n;
+				try {
+					r1 = arg1.toString().split(".")[1].length;
+				} catch(e) {
+					r1 = 0;
+				}
+				try {
+					r2 = arg2.toString().split(".")[1].length;
+				} catch(e) {
+					r2 = 0;
+				}
+				m = Math.pow(10, Math.max(r1, r2)); //last modify by deeka //动态控制精度长度
+				n = (r1 >= r2) ? r1 : r2;
+				return((arg1 * m + arg2 * m) / m).toFixed(n);
+			};
+			/*减法函数，用来得到精确的减法结果*/
+			function accSub(arg1, arg2) {
+			    var r1, r2, m, n;
+			    try {
+			        r1 = arg1.toString().split(".")[1].length;
+			    }
+			    catch (e) {
+			        r1 = 0;
+			    }
+			    try {
+			        r2 = arg2.toString().split(".")[1].length;
+			    }
+			    catch (e) {
+			        r2 = 0;
+			    }
+			    m = Math.pow(10, Math.max(r1, r2)); //last modify by deeka //动态控制精度长度
+			    n = (r1 >= r2) ? r1 : r2;
+			    return ((arg1 * m - arg2 * m) / m).toFixed(n);
+			};
+		</script>
+	</body>
+
+</html>

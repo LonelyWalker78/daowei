@@ -1,0 +1,129 @@
+<!DOCTYPE HTML>
+<html>
+
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<meta name="HandheldFriendly" content="true" />
+		<meta name="MobileOptimized" content="320" />
+		<link rel="stylesheet" href="css/mui.min.css" />
+		<link rel="stylesheet" href="css/swiper.min.css" />
+		<title></title>
+		<style type="text/css">
+			html,
+			body {
+				position: relative;
+				height: 97px;
+				background-color: transparent;
+			}
+			
+			body {
+				font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+				color: #000;
+				margin: 0;
+				padding: 0;
+			}
+			
+			.box_display {
+				display: -webkit-box;
+				/* Chrome 4+, Safari 3.1, iOS Safari 3.2+ */
+				display: -webkit-flex;
+				/* Chrome 21+, Safari 6.1+, iOS Safari 7+, Opera 15/16 */
+				display: flex;
+				/* Chrome 29+, Firefox 22+, IE 11+, Opera 12.1/17/18, Android 4.4+ */
+			}
+			
+			.flex_1 {
+				-webkit-box-flex: 1;
+				/* OLD - iOS 6-, Safari 3.1-6 */
+				-webkit-flex: 1;
+				/* Chrome */
+				flex: 1;
+			}
+			
+			.swiper-container {
+				width: 100%;
+				height: 100%;
+			}
+			
+			.swiper-slide {
+				width: 100%;
+			}
+			
+			.slider-container {
+				-webkit-box-shadow: 0 0 3px 0 rgb(222, 222, 222);
+				-moz-box-shadow: 0 0 3px 0 rgb(222, 222, 222);
+				box-shadow: 0 0 3px 0 rgb(222, 222, 222);
+				font-size: 18px;
+				background: #fff;
+				width: auto;
+				height: 91px;
+				margin: 3px 10px;
+			}
+		</style>
+		<script id='commodity-list-template' type="text/template">
+			<% for(var i in record){ var item=record[i]; %>
+			<div class="swiper-slide" itemId="<%=(item.itemId)%>">
+			<div class="slider-container" style="background-color: #fff;padding: 8px 0 8px 13px;" onclick="details(<%=(item.itemId)%>)">
+				<div class="box_display" style="font-size: 16px;"><%=(item.title)%></div>
+				<div style="width: 100%;height: 1px;background-color: rgb(238,238,238);margin: 5px 0;"></div>
+				<div style="font-size: 14px;">
+					<span>价格：</span>
+					<span style="color: red;">￥<%=(item.price)%></span>
+				</div>
+				<div style="font-size: 14px;margin-top: 2px;">
+					<span>地址：</span>
+					<span><%=(item.address)%></span>
+				</div>
+			</div>
+			</div>
+			<% } %>
+		</script>
+	</head>
+
+	<body>
+		<div class="swiper-container swiper-container-horizontal">
+			<div id="container" class="swiper-wrapper" style="transition-duration: 0ms; transform: translate3d(0px, 0px, 0px);">
+
+			</div>
+		</div>
+		<script src="js/arttmpl.js"></script>
+		<script src="js/swiper.min.js"></script>
+		<script type="text/javascript">
+			var swiper = null;
+			swiper = new Swiper('.swiper-container');
+			var container = document.getElementById('container');
+			function showInfo(temp, itemId) {
+				swiper.slideTo(0, 0, false);
+				var goodsInfo = JSON.parse(temp);
+				var index = 0;
+				for (var i = 0; i < goodsInfo.length; i++) {
+					if (goodsInfo[i].itemId == itemId) {
+						index = i;
+					}
+				}
+				swiper.destroy();
+				swiper = null;
+				container.innerHTML = template('commodity-list-template', {
+					"record": goodsInfo
+				});
+				swiper = new Swiper('.swiper-container', {
+					onSlideChangeStart: function(aswiper){
+						var sindex = aswiper.activeIndex;
+      					plus.webview.currentWebview().opener().evalJS("changeSlider('" + sindex + "','" + goodsInfo[sindex].img + "');");
+    				}
+				});
+				if (index == 0) {
+					swiper.slideTo(1, 0, false);
+					swiper.slidePrev(false, 0);
+				} else {
+					swiper.slideTo(index, 0, false);
+				}
+			}
+			function details(itemId) {
+				plus.webview.currentWebview().opener().evalJS("viewDetails('" + itemId + "');");
+			}
+		</script>
+	</body>
+
+</html>

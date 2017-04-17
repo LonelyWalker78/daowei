@@ -1,0 +1,37 @@
+{
+	"index.html": {
+		"resources": [
+			"js/mui.min.js",
+			"css/mui.min.css",
+			"maps-location-sub.html",
+			"js/iconload.js",
+			"js/md5.js"
+		],
+		"refer": [
+			"maps_map_sub.html",
+			"maps-location-sub.html",
+			"detailes.html"
+		]
+	},
+	"maps_map_sub.html": {
+		"resources": [
+			"js/swiper.min.js",
+			"js/arttmpl.js",
+			"images/buy-list-right-arrow.png",
+			"css/swiper.min.css",
+			"css/mui.min.css"
+		]
+	},
+	"maps-location-sub.html": {
+		"resources": [
+			"images/map_location1.png"
+		]
+	},
+	"detailes.html": {
+		"resources": [
+			"js/mui.min.js",
+			"css/mui.min.css",
+			"fonts/mui.ttf"
+		]
+	}
+}
